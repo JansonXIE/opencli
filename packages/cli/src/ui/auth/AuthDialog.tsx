@@ -77,6 +77,11 @@ export function AuthDialog({
       key: AuthType.USE_DEEPSEEK,
     },
     {
+      label: 'Use MINIMAX API Key',
+      value: AuthType.USE_MINIMAX,
+      key: AuthType.USE_MINIMAX,
+    },
+    {
       label: 'Vertex AI',
       value: AuthType.USE_VERTEX_AI,
       key: AuthType.USE_VERTEX_AI,
@@ -117,6 +122,10 @@ export function AuthDialog({
       return item.value === AuthType.USE_DEEPSEEK;
     }
 
+    if (process.env['MINIMAX_API_KEY']) {
+      return item.value === AuthType.USE_MINIMAX;
+    }
+
     return item.value === AuthType.LOGIN_WITH_GOOGLE;
   });
   if (settings.merged.security.auth.enforcedType) {
@@ -146,8 +155,19 @@ export function AuthDialog({
           return;
         }
 
-        if (authType === AuthType.USE_GEMINI || authType === AuthType.USE_DEEPSEEK) {
-          const envKey = authType === AuthType.USE_GEMINI ? process.env['GEMINI_API_KEY'] : process.env['DEEPSEEK_API_KEY'];
+        if (
+          authType === AuthType.USE_GEMINI ||
+          authType === AuthType.USE_DEEPSEEK ||
+          authType === AuthType.USE_MINIMAX
+        ) {
+          let envKey;
+          if (authType === AuthType.USE_DEEPSEEK) {
+            envKey = process.env['DEEPSEEK_API_KEY'];
+          } else if (authType === AuthType.USE_MINIMAX) {
+            envKey = process.env['MINIMAX_API_KEY'];
+          } else {
+            envKey = process.env['GEMINI_API_KEY'];
+          }
           if (envKey !== undefined) {
             setAuthState(AuthState.Unauthenticated);
             return;

@@ -106,21 +106,32 @@ export function ApiAuthDialog({
       width="100%"
     >
       <Text bold color={theme.text.primary}>
-        Enter {authType === AuthType.USE_DEEPSEEK ? 'DeepSeek' : 'Gemini'} API
-        Key
+        Enter{' '}
+        {authType === AuthType.USE_DEEPSEEK
+          ? 'DeepSeek'
+          : authType === AuthType.USE_MINIMAX
+            ? 'MiniMax'
+            : 'Gemini'}{' '}
+        API Key
       </Text>
       <Box marginTop={1} flexDirection="column">
         <Text color={theme.text.primary}>
           Please enter your{' '}
-          {authType === AuthType.USE_DEEPSEEK ? 'DeepSeek' : 'Gemini'} API key.
-          It will be securely stored in your system keychain.
+          {authType === AuthType.USE_DEEPSEEK
+            ? 'DeepSeek'
+            : authType === AuthType.USE_MINIMAX
+              ? 'MiniMax'
+              : 'Gemini'}{' '}
+          API key. It will be securely stored in your system keychain.
         </Text>
         <Text color={theme.text.secondary}>
           You can get an API key from{' '}
           <Text color={theme.text.link}>
             {authType === AuthType.USE_DEEPSEEK
               ? 'https://platform.deepseek.com/api_keys'
-              : 'https://aistudio.google.com/app/apikey'}
+              : authType === AuthType.USE_MINIMAX
+                ? 'https://platform.minimaxi.com/user-center/basic-information/interface-key'
+                : 'https://aistudio.google.com/app/apikey'}
           </Text>
         </Text>
       </Box>

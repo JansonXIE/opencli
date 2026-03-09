@@ -29,8 +29,12 @@ export function validateAuthMethodWithSettings(
   if (settings.merged.security.auth.useExternal) {
     return null;
   }
-  // If using Gemini or DeepSeek API key, we don't validate it here as we might need to prompt for it.
-  if (authType === AuthType.USE_GEMINI || authType === AuthType.USE_DEEPSEEK) {
+  // If using Gemini, DeepSeek, or MiniMax API key, we don't validate it here as we might need to prompt for it.
+  if (
+    authType === AuthType.USE_GEMINI ||
+    authType === AuthType.USE_DEEPSEEK ||
+    authType === AuthType.USE_MINIMAX
+  ) {
     return null;
   }
   return validateAuthMethod(authType);
@@ -67,10 +71,14 @@ export const useAuthCommand = (
   );
 
   const reloadApiKey = useCallback(async () => {
-    const envKey =
-      selectedAuthType === AuthType.USE_DEEPSEEK
-        ? process.env['DEEPSEEK_API_KEY']
-        : process.env['GEMINI_API_KEY'];
+    let envKey;
+    if (selectedAuthType === AuthType.USE_DEEPSEEK) {
+      envKey = process.env['DEEPSEEK_API_KEY'];
+    } else if (selectedAuthType === AuthType.USE_MINIMAX) {
+      envKey = process.env['MINIMAX_API_KEY'];
+    } else {
+      envKey = process.env['GEMINI_API_KEY'];
+    }
     if (envKey !== undefined) {
       setApiKeyDefaultValue(envKey);
       return envKey;
@@ -109,7 +117,8 @@ export const useAuthCommand = (
 
       if (
         authType === AuthType.USE_GEMINI ||
-        authType === AuthType.USE_DEEPSEEK
+        authType === AuthType.USE_DEEPSEEK ||
+        authType === AuthType.USE_MINIMAX
       ) {
         const key = await reloadApiKey(); // Use the unified function
         if (!key) {
