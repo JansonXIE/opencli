@@ -77,9 +77,9 @@ export function AuthDialog({
       key: AuthType.USE_DEEPSEEK,
     },
     {
-      label: 'Use MINIMAX API Key',
-      value: AuthType.USE_MINIMAX,
-      key: AuthType.USE_MINIMAX,
+      label: 'Use Kimi API Key',
+      value: AuthType.USE_KIMI,
+      key: AuthType.USE_KIMI,
     },
     {
       label: 'Vertex AI',
@@ -122,8 +122,8 @@ export function AuthDialog({
       return item.value === AuthType.USE_DEEPSEEK;
     }
 
-    if (process.env['MINIMAX_API_KEY']) {
-      return item.value === AuthType.USE_MINIMAX;
+    if (process.env['KIMI_API_KEY']) {
+      return item.value === AuthType.USE_KIMI;
     }
 
     return item.value === AuthType.LOGIN_WITH_GOOGLE;
@@ -158,13 +158,13 @@ export function AuthDialog({
         if (
           authType === AuthType.USE_GEMINI ||
           authType === AuthType.USE_DEEPSEEK ||
-          authType === AuthType.USE_MINIMAX
+          authType === AuthType.USE_KIMI
         ) {
           let envKey;
           if (authType === AuthType.USE_DEEPSEEK) {
             envKey = process.env['DEEPSEEK_API_KEY'];
-          } else if (authType === AuthType.USE_MINIMAX) {
-            envKey = process.env['MINIMAX_API_KEY'];
+          } else if (authType === AuthType.USE_KIMI) {
+            envKey = process.env['KIMI_API_KEY'];
           } else {
             envKey = process.env['GEMINI_API_KEY'];
           }

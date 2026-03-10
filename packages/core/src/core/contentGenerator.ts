@@ -58,7 +58,7 @@ export enum AuthType {
   USE_GEMINI = 'gemini-api-key',
   USE_VERTEX_AI = 'vertex-ai',
   USE_DEEPSEEK = 'deepseek-api-key',
-  USE_MINIMAX = 'minimax-api-key',
+  USE_KIMI = 'kimi-api-key',
   LEGACY_CLOUD_SHELL = 'cloud-shell',
   COMPUTE_ADC = 'compute-default-credentials',
 }
@@ -84,8 +84,8 @@ export function getAuthTypeFromEnv(): AuthType | undefined {
   if (process.env['DEEPSEEK_API_KEY']) {
     return AuthType.USE_DEEPSEEK;
   }
-  if (process.env['MINIMAX_API_KEY']) {
-    return AuthType.USE_MINIMAX;
+  if (process.env['KIMI_API_KEY']) {
+    return AuthType.USE_KIMI;
   }
   if (
     process.env['CLOUD_SHELL'] === 'true' ||
@@ -123,9 +123,9 @@ export async function createContentGeneratorConfig(
     process.env['DEEPSEEK_API_KEY'] ||
     (await loadApiKey(AuthType.USE_DEEPSEEK)) ||
     undefined;
-  const minimaxApiKey =
-    process.env['MINIMAX_API_KEY'] ||
-    (await loadApiKey(AuthType.USE_MINIMAX)) ||
+  const kimiApiKey =
+    process.env['KIMI_API_KEY'] ||
+    (await loadApiKey(AuthType.USE_KIMI)) ||
     undefined;
 
   const contentGeneratorConfig: ContentGeneratorConfig = {
@@ -163,8 +163,8 @@ export async function createContentGeneratorConfig(
     return contentGeneratorConfig;
   }
 
-  if (authType === AuthType.USE_MINIMAX && minimaxApiKey) {
-    contentGeneratorConfig.apiKey = minimaxApiKey;
+  if (authType === AuthType.USE_KIMI && kimiApiKey) {
+    contentGeneratorConfig.apiKey = kimiApiKey;
     return contentGeneratorConfig;
   }
 
@@ -259,12 +259,12 @@ export async function createContentGenerator(
         gcConfig,
       );
     }
-    if (config.authType === AuthType.USE_MINIMAX && config.apiKey) {
-      const { MinimaxContentGenerator } = await import(
-        './minimaxContentGenerator.js'
+    if (config.authType === AuthType.USE_KIMI && config.apiKey) {
+      const { KimiContentGenerator } = await import(
+        './kimiContentGenerator.js'
       );
       return new LoggingContentGenerator(
-        new MinimaxContentGenerator(config.apiKey),
+        new KimiContentGenerator(config.apiKey),
         gcConfig,
       );
     }

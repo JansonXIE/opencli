@@ -109,8 +109,8 @@ export function ApiAuthDialog({
         Enter{' '}
         {authType === AuthType.USE_DEEPSEEK
           ? 'DeepSeek'
-          : authType === AuthType.USE_MINIMAX
-            ? 'MiniMax'
+          : authType === AuthType.USE_KIMI
+            ? 'Kimi'
             : 'Gemini'}{' '}
         API Key
       </Text>
@@ -119,8 +119,8 @@ export function ApiAuthDialog({
           Please enter your{' '}
           {authType === AuthType.USE_DEEPSEEK
             ? 'DeepSeek'
-            : authType === AuthType.USE_MINIMAX
-              ? 'MiniMax'
+            : authType === AuthType.USE_KIMI
+              ? 'Kimi'
               : 'Gemini'}{' '}
           API key. It will be securely stored in your system keychain.
         </Text>
@@ -129,8 +129,8 @@ export function ApiAuthDialog({
           <Text color={theme.text.link}>
             {authType === AuthType.USE_DEEPSEEK
               ? 'https://platform.deepseek.com/api_keys'
-              : authType === AuthType.USE_MINIMAX
-                ? 'https://platform.minimaxi.com/user-center/basic-information/interface-key'
+              : authType === AuthType.USE_KIMI
+                ? 'https://platform.moonshot.cn/console/api-keys'
                 : 'https://aistudio.google.com/app/apikey'}
           </Text>
         </Text>

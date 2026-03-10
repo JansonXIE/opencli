@@ -29,11 +29,11 @@ export function validateAuthMethodWithSettings(
   if (settings.merged.security.auth.useExternal) {
     return null;
   }
-  // If using Gemini, DeepSeek, or MiniMax API key, we don't validate it here as we might need to prompt for it.
+  // If using Gemini, DeepSeek, or Kimi API key, we don't validate it here as we might need to prompt for it.
   if (
     authType === AuthType.USE_GEMINI ||
     authType === AuthType.USE_DEEPSEEK ||
-    authType === AuthType.USE_MINIMAX
+    authType === AuthType.USE_KIMI
   ) {
     return null;
   }
@@ -74,8 +74,8 @@ export const useAuthCommand = (
     let envKey;
     if (selectedAuthType === AuthType.USE_DEEPSEEK) {
       envKey = process.env['DEEPSEEK_API_KEY'];
-    } else if (selectedAuthType === AuthType.USE_MINIMAX) {
-      envKey = process.env['MINIMAX_API_KEY'];
+    } else if (selectedAuthType === AuthType.USE_KIMI) {
+      envKey = process.env['KIMI_API_KEY'];
     } else {
       envKey = process.env['GEMINI_API_KEY'];
     }
@@ -118,7 +118,7 @@ export const useAuthCommand = (
       if (
         authType === AuthType.USE_GEMINI ||
         authType === AuthType.USE_DEEPSEEK ||
-        authType === AuthType.USE_MINIMAX
+        authType === AuthType.USE_KIMI
       ) {
         const key = await reloadApiKey(); // Use the unified function
         if (!key) {

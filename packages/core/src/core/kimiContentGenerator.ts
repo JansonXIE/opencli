@@ -18,7 +18,7 @@ import type { ContentGenerator } from './contentGenerator.js';
 import type { UserTierId, GeminiUserTier } from '../code_assist/types.js';
 import type { LlmRole } from '../telemetry/llmRole.js';
 
-export class MinimaxContentGenerator implements ContentGenerator {
+export class KimiContentGenerator implements ContentGenerator {
   userTier?: UserTierId;
   userTierName?: string;
   paidTier?: GeminiUserTier;
@@ -49,17 +49,57 @@ export class MinimaxContentGenerator implements ContentGenerator {
   }
 
   private convertContentsToMessages(contents: Content[]): any[] {
-    return contents.map((c) => {
+    return contents.flatMap((c): any[] => {
       let role = 'user';
       if (c.role === 'model') role = 'assistant';
       if (c.role === 'system') role = 'system';
 
       const parts = c.parts || [];
+
+      const functionResponses = parts.filter((p) => 'functionResponse' in p);
+      if (functionResponses.length > 0) {
+        return functionResponses.map((p) => {
+          const fr = (p as any).functionResponse;
+          return {
+            role: 'tool',
+            tool_call_id: fr.id || fr.name,
+            content: JSON.stringify(fr.response),
+            name: fr.name,
+          };
+        });
+      }
+
+      const functionCalls = parts.filter((p) => 'functionCall' in p);
+      if (functionCalls.length > 0) {
+        return [
+          {
+            role: 'assistant',
+            tool_calls: functionCalls.map((p) => {
+              const fc = (p as any).functionCall;
+              return {
+                id: fc.id || fc.name,
+                type: 'function',
+                function: {
+                  name: fc.name,
+                  arguments:
+                    typeof fc.args === 'string'
+                      ? fc.args
+                      : JSON.stringify(fc.args || {}),
+                },
+              };
+            }),
+          },
+        ];
+      }
+
       const textParts = parts
         .filter((p: Part) => typeof p.text === 'string')
         .map((p: Part) => p.text);
-      const content = textParts.join('\n');
-      return { role, content };
+      if (textParts.length > 0) {
+        const content = textParts.join('\n');
+        return [{ role, content }];
+      }
+      return [];
     });
   }
 
@@ -101,18 +141,33 @@ export class MinimaxContentGenerator implements ContentGenerator {
     }
 
     let modelName =
-      typeof request.model === 'string' ? request.model : 'MiniMax-M2.1';
+      typeof request.model === 'string' ? request.model : 'kimi-k2-turbo-preview';
     if (modelName.startsWith('models/')) {
       modelName = modelName.replace('models/', '');
     }
 
     if (modelName.includes('gemini')) {
-      modelName = 'MiniMax-M2.1';
+      modelName = 'kimi-k2-turbo-preview';
+    }
+
+    let tools: any[] | undefined = undefined;
+    if (request.config?.tools && request.config.tools.length > 0) {
+      tools = request.config.tools.flatMap((t: any) =>
+        (t.functionDeclarations || []).map((fd: any) => ({
+          type: 'function',
+          function: {
+            name: fd.name,
+            description: fd.description,
+            parameters: fd.parameters,
+          },
+        })),
+      );
     }
 
     const body = {
       model: modelName,
       messages,
+      tools,
       temperature: request.config?.temperature,
       top_p: request.config?.topP,
       max_tokens: request.config?.maxOutputTokens,
@@ -120,7 +175,7 @@ export class MinimaxContentGenerator implements ContentGenerator {
     };
 
     const response = await fetch(
-      'https://api.minimaxi.com/v1/chat/completions',
+      'https://api.moonshot.cn/v1/chat/completions',
       {
         method: 'POST',
         headers: {
@@ -133,17 +188,43 @@ export class MinimaxContentGenerator implements ContentGenerator {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`MiniMax API error (${response.status}): ${errorText}`);
+      throw new Error(`Kimi API error (${response.status}): ${errorText}`);
     }
 
     const data = await response.json();
-    const messageContent = data.choices?.[0]?.message?.content || '';
+    const message = data.choices?.[0]?.message;
+    const messageContent = message?.content || '';
+    const toolCalls = message?.tool_calls || [];
+
+    const parts: Part[] = [];
+    const extractedFunctionCalls: any[] = [];
+    if (messageContent) {
+      parts.push({ text: messageContent });
+    }
+    for (const tc of toolCalls) {
+      if (tc.type === 'function') {
+        const functionCall: any = {
+          name: tc.function.name,
+          args: tc.function.arguments ? JSON.parse(tc.function.arguments) : {},
+        };
+        if (tc.id) {
+          functionCall.id = tc.id;
+        }
+
+        parts.push({ functionCall });
+        extractedFunctionCalls.push(functionCall);
+      }
+    }
 
     return {
       text: messageContent,
+      functionCalls:
+        extractedFunctionCalls.length > 0
+          ? extractedFunctionCalls
+          : undefined,
       candidates: [
         {
-          content: { parts: [{ text: messageContent }], role: 'model' },
+          content: { parts, role: 'model' },
           finishReason: 'STOP',
         },
       ],
@@ -195,18 +276,33 @@ export class MinimaxContentGenerator implements ContentGenerator {
       }
 
       let modelName =
-        typeof request.model === 'string' ? request.model : 'MiniMax-M2.1';
+        typeof request.model === 'string' ? request.model : 'kimi-k2-turbo-preview';
       if (modelName.startsWith('models/')) {
         modelName = modelName.replace('models/', '');
       }
 
       if (modelName.includes('gemini')) {
-        modelName = 'MiniMax-M2.1';
+        modelName = 'kimi-k2-turbo-preview';
+      }
+
+      let tools: any[] | undefined = undefined;
+      if (request.config?.tools && request.config.tools.length > 0) {
+        tools = request.config.tools.flatMap((t: any) =>
+          (t.functionDeclarations || []).map((fd: any) => ({
+            type: 'function',
+            function: {
+              name: fd.name,
+              description: fd.description,
+              parameters: fd.parameters,
+            },
+          })),
+        );
       }
 
       const body = {
         model: modelName,
         messages,
+        tools,
         temperature: request.config?.temperature,
         top_p: request.config?.topP,
         max_tokens: request.config?.maxOutputTokens,
@@ -214,7 +310,7 @@ export class MinimaxContentGenerator implements ContentGenerator {
       };
 
       const response = await fetch(
-        'https://api.minimaxi.com/v1/chat/completions',
+        'https://api.moonshot.cn/v1/chat/completions',
         {
           method: 'POST',
           headers: {
@@ -228,17 +324,19 @@ export class MinimaxContentGenerator implements ContentGenerator {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `MiniMax stream error (${response.status}): ${errorText}`,
+          `Kimi stream error (${response.status}): ${errorText}`,
         );
       }
 
       if (!response.body) {
-        throw new Error('No response body from MiniMax');
+        throw new Error('No response body from Kimi');
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
+      const toolCallsBuffer: any[] = [];
+      let lastUsage: any = null;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -250,12 +348,74 @@ export class MinimaxContentGenerator implements ContentGenerator {
 
         for (const line of lines) {
           if (line.trim() === '') continue;
-          if (line.trim() === 'data: [DONE]') return;
+          if (line.trim() === 'data: [DONE]') {
+            if (toolCallsBuffer.length > 0) {
+              for (const tc of toolCallsBuffer) {
+                if (tc && tc.name) {
+                  const fc = {
+                    id: tc.id,
+                    name: tc.name,
+                    args: tc.args ? JSON.parse(tc.args) : {},
+                  };
+                  yield {
+                    functionCalls: [fc],
+                    candidates: [
+                      {
+                        content: {
+                          parts: [
+                            {
+                              functionCall: fc as any,
+                            },
+                          ],
+                          role: 'model',
+                        },
+                        finishReason: 'STOP',
+                      },
+                    ],
+                    usageMetadata: lastUsage
+                      ? {
+                          promptTokenCount:
+                            lastUsage.prompt_tokens || 0,
+                          candidatesTokenCount:
+                            lastUsage.completion_tokens || 0,
+                          totalTokenCount:
+                            lastUsage.total_tokens || 0,
+                        }
+                      : undefined,
+                  } as any;
+                }
+              }
+            } else {
+              yield {
+                candidates: [
+                  {
+                    content: { parts: [], role: 'model' },
+                    finishReason: 'STOP',
+                  },
+                ],
+                usageMetadata: lastUsage
+                  ? {
+                      promptTokenCount: lastUsage.prompt_tokens || 0,
+                      candidatesTokenCount:
+                        lastUsage.completion_tokens || 0,
+                      totalTokenCount: lastUsage.total_tokens || 0,
+                    }
+                  : undefined,
+              } as any;
+            }
+            return;
+          }
 
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              const content = data.choices?.[0]?.delta?.content || '';
+              const delta = data.choices?.[0]?.delta;
+              if (data.usage) lastUsage = data.usage;
+              if (!delta) continue;
+
+              const content = delta.content || '';
+              const toolCalls = delta.tool_calls;
+
               if (content) {
                 yield {
                   text: content,
@@ -265,6 +425,19 @@ export class MinimaxContentGenerator implements ContentGenerator {
                     },
                   ],
                 } as any;
+              }
+
+              if (toolCalls && toolCalls.length > 0) {
+                for (const tc of toolCalls) {
+                  const idx = tc.index;
+                  if (!toolCallsBuffer[idx])
+                    toolCallsBuffer[idx] = { id: '', name: '', args: '' };
+                  if (tc.id) toolCallsBuffer[idx].id += tc.id;
+                  if (tc.function?.name)
+                    toolCallsBuffer[idx].name += tc.function.name;
+                  if (tc.function?.arguments)
+                    toolCallsBuffer[idx].args += tc.function.arguments;
+                }
               }
             } catch (e) {
               console.error('Error parsing streaming JSON:', e, line);
@@ -284,6 +457,6 @@ export class MinimaxContentGenerator implements ContentGenerator {
   async embedContent(
     request: EmbedContentParameters,
   ): Promise<EmbedContentResponse> {
-    throw new Error('embedContent not supported by MinimaxContentGenerator');
+    throw new Error('embedContent not supported by KimiContentGenerator');
   }
 }
