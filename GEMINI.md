@@ -36,6 +36,7 @@ for developers.
 - **Run in Development:** `npm run start`
 - **Run in Debug Mode:** `npm run debug` (Enables Node.js inspector)
 - **Bundle Project:** `npm run bundle`
+- **Global Symbolic Link:** `npm link`
 - **Clean Artifacts:** `npm run clean`
 
 ## Testing and Quality
